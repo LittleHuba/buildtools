@@ -690,6 +690,7 @@ cat > golden/sarif_report_golden <<'EOF'
                     ]
                 }
             },
+            "columnKind": "unicodeCodePoints",
             "results": [
                 {
                     "ruleId": "bzl-visibility",
@@ -813,6 +814,7 @@ cat > golden/sarif_report_small_golden <<'EOF'
                     "rules": []
                 }
             },
+            "columnKind": "unicodeCodePoints",
             "results": []
         }
     ]
@@ -832,6 +834,7 @@ cat > golden/sarif_report_stdin_golden <<'EOF'
                     "rules": []
                 }
             },
+            "columnKind": "unicodeCodePoints",
             "results": []
         }
     ]
@@ -858,6 +861,7 @@ cat > golden/sarif_report_invalid_file_golden <<'EOF'
                     ]
                 }
             },
+            "columnKind": "unicodeCodePoints",
             "results": [
                 {
                     "ruleId": "parse-error",

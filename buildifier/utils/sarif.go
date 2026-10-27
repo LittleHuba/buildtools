@@ -18,7 +18,9 @@ package utils
 
 import (
 	"encoding/json"
+	"net/url"
 	"path/filepath"
+	"strings"
 )
 
 const (
@@ -27,8 +29,10 @@ const (
 	sarifToolURI      = "https://github.com/bazel-contrib/buildtools/tree/main/buildifier"
 	sarifLevelWarning = "warning"
 	sarifLevelError   = "error"
-	sarifFormatRule   = "format"
-	sarifParseRule    = "parse-error"
+	// Columns are counted in runes, see build.Position.LineRune.
+	sarifColumnKind = "unicodeCodePoints"
+	sarifFormatRule = "format"
+	sarifParseRule  = "parse-error"
 )
 
 // Minimal subset of SARIF 2.1.0 needed to report buildifier diagnostics.
@@ -40,8 +44,9 @@ type sarifLog struct {
 }
 
 type sarifRun struct {
-	Tool    sarifTool     `json:"tool"`
-	Results []sarifResult `json:"results"`
+	Tool       sarifTool     `json:"tool"`
+	ColumnKind string        `json:"columnKind"`
+	Results    []sarifResult `json:"results"`
 }
 
 type sarifTool struct {
@@ -117,14 +122,31 @@ func (b *sarifBuilder) add(ruleID, description, helpURI, level, message, filenam
 		RuleID:    ruleID,
 		RuleIndex: b.ruleIndex(ruleID, description, helpURI),
 		Level:     level,
-		Message:   sarifMessage{Text: message},
+		Message:   sarifMessage{Text: escapeSarifBraces(message)},
 		Locations: []sarifLocation{{
 			PhysicalLocation: sarifPhysicalLocation{
-				ArtifactLocation: sarifArtifactLocation{URI: filepath.ToSlash(filename)},
+				ArtifactLocation: sarifArtifactLocation{URI: sarifURI(filename)},
 				Region:           region,
 			},
 		}},
 	})
+}
+
+// escapeSarifBraces escapes the placeholder delimiters in message strings (SARIF 3.11.5).
+var escapeSarifBraces = strings.NewReplacer("{", "{{", "}", "}}").Replace
+
+// sarifURI converts a file name into a URI reference as required by SARIF 3.4.3:
+// special characters are percent-encoded, absolute paths become file URIs and
+// relative paths are relative-path references.
+func sarifURI(filename string) string {
+	path := filepath.ToSlash(filename)
+	if filepath.IsAbs(filename) {
+		if !strings.HasPrefix(path, "/") {
+			path = "/" + path // Windows drive letter, e.g. C:/dir
+		}
+		return (&url.URL{Scheme: "file", Path: path}).String()
+	}
+	return (&url.URL{Path: path}).String()
 }
 
 // formatSarif renders the diagnostics as a SARIF 2.1.0 log.
@@ -171,7 +193,8 @@ func (d *Diagnostics) formatSarif(verbose bool) string {
 				InformationURI: sarifToolURI,
 				Rules:          b.rules,
 			}},
-			Results: b.results,
+			ColumnKind: sarifColumnKind,
+			Results:    b.results,
 		}},
 	}
 
