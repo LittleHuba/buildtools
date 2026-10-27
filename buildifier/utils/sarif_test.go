@@ -63,3 +63,37 @@ func TestFormatSarifEmpty(t *testing.T) {
 		t.Errorf("expected empty arrays, got:\n%s", out)
 	}
 }
+
+func TestSarifURI(t *testing.T) {
+	for in, want := range map[string]string{
+		"a/b.bzl":    "a/b.bzl",
+		"a b/c.bzl":  "a%20b/c.bzl",
+		"<stdin>":    "%3Cstdin%3E",
+		"/tmp/x.bzl": "file:///tmp/x.bzl",
+		"a:b/c.bzl":  "./a:b/c.bzl",
+	} {
+		if got := sarifURI(in); got != want {
+			t.Errorf("sarifURI(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestFormatSarifEscapesBracesAndSetsColumnKind(t *testing.T) {
+	finding := &warn.Finding{
+		Start:    build.Position{Line: 1, LineRune: 1},
+		End:      build.Position{Line: 1, LineRune: 2},
+		Category: "c",
+		Message:  `use {"a": 1}`,
+	}
+	out := NewDiagnostics(NewFileDiagnostics("a.bzl", []*warn.Finding{finding})).Format("sarif", false)
+	var log sarifLog
+	if err := json.Unmarshal([]byte(out), &log); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := log.Runs[0].Results[0].Message.Text, `use {{"a": 1}}`; got != want {
+		t.Errorf("message = %q, want %q", got, want)
+	}
+	if log.Runs[0].ColumnKind != "unicodeCodePoints" {
+		t.Errorf("columnKind = %q", log.Runs[0].ColumnKind)
+	}
+}
