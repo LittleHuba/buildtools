@@ -831,11 +831,36 @@ cat > golden/sarif_report_stdin_golden <<'EOF'
                 "driver": {
                     "name": "buildifier",
                     "informationUri": "https://github.com/bazel-contrib/buildtools/tree/main/buildifier",
-                    "rules": []
+                    "rules": [
+                        {
+                            "id": "format",
+                            "shortDescription": {
+                                "text": "The file is not formatted according to buildifier's rules."
+                            }
+                        }
+                    ]
                 }
             },
             "columnKind": "unicodeCodePoints",
-            "results": []
+            "results": [
+                {
+                    "ruleId": "format",
+                    "ruleIndex": 0,
+                    "level": "warning",
+                    "message": {
+                        "text": "The file needs to be reformatted."
+                    },
+                    "locations": [
+                        {
+                            "physicalLocation": {
+                                "artifactLocation": {
+                                    "uri": "%3Cstdin%3E"
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
         }
     ]
 }
@@ -906,7 +931,7 @@ diff -u sarif_report ../../golden/sarif_report_golden || die "$1: wrong console 
 $buildifier --mode=check --format=sarif --lint=warn --warnings=-module-docstring -v to_fix_4.bzl > sarif_report
 diff -u sarif_report ../../golden/sarif_report_small_golden || die "$1: wrong console output for --mode=check --format=sarif --lint=warn with a single file"
 
-$buildifier --mode=check --format=sarif --lint=warn --warnings=-module-docstring -v < to_fix_4.bzl > sarif_report
+$buildifier --mode=check --format=sarif --lint=warn --warnings=-module-docstring -v < to_fix_2.bzl > sarif_report
 diff -u sarif_report ../../golden/sarif_report_stdin_golden || die "$1: wrong console output for --mode=check --format=sarif --lint=warn with stdin"
 
 $buildifier --mode=check --format=sarif --lint=warn --warnings=-module-docstring -v to_fix_4.bzl foo.bar > sarif_report
